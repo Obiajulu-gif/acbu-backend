@@ -12,6 +12,7 @@ import {
   QUEUES,
   assertQueueWithDLQ,
 } from "../config/rabbitmq";
+import { getQueueMaxRetries } from "./queueConfig";
 import { logger } from "../config/logger";
 import { prisma } from "../config/database";
 import { mintFromUsdcInternal } from "../controllers/mintController";
@@ -19,7 +20,7 @@ import { swapUsdcToXlm } from "../services/stellar/usdcSwap";
 import { Decimal } from "@prisma/client/runtime/library";
 
 const QUEUE = QUEUES.USDC_CONVERT_AND_MINT;
-const MAX_RETRIES = 5;
+const MAX_RETRIES = getQueueMaxRetries(QUEUE);
 
 export interface UsdcConvertAndMintPayload {
   onRampSwapId: string;

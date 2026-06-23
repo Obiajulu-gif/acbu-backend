@@ -14,8 +14,8 @@ import { prisma } from "../../config/database";
 import { Decimal } from "@prisma/client/runtime/library";
 import { ReserveTracker } from "../reserve/ReserveTracker";
 
-jest.mock("../../config/database", () => ({
-  prisma: {
+jest.mock("../../config/database", () => {
+  const mockDb = {
     reserve: {
       findMany: jest.fn(),
     },
@@ -25,8 +25,12 @@ jest.mock("../../config/database", () => ({
     oracleRate: {
       findFirst: jest.fn(),
     },
-  },
-}));
+  };
+  return {
+    prisma: mockDb,
+    prismaReplica: mockDb,
+  };
+});
 
 jest.mock("../../config/logger", () => ({
   logger: {
@@ -155,19 +159,15 @@ describe("TreasuryService", () => {
 
       // First call: no current rate
       // Second call: fallback rate from 3 days ago
-      mockPrisma.oracleRate.findFirst
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce({
-          rateUsd: new Decimal("0.05"),
-          timestamp: threeDaysAgo,
-        } as any);
+      mockPrisma.oracleRate.findFirst.mockResolvedValueOnce(null).mockResolvedValueOnce({
+        rateUsd: new Decimal("0.05"),
+        timestamp: threeDaysAgo,
+      } as any);
 
       const result = await getEnterpriseTreasury();
 
       expect(result.byCurrency[0].transactions.fxRateSource).toBe("fallback");
-      expect(result.byCurrency[0].transactions.fxRateTimestamp).toEqual(
-        threeDaysAgo,
-      );
+      expect(result.byCurrency[0].transactions.fxRateTimestamp).toEqual(threeDaysAgo);
     });
 
     it("uses rate=1 when no FX rate available at all", async () => {
@@ -355,10 +355,7 @@ describe("TreasuryService", () => {
 
       expect(result.totalBalanceUsd).toBeCloseTo(6776.25, 2);
       expect(result.summary.transactionsSegmentUsd).toBeCloseTo(4517.5, 2);
-      expect(result.summary.investmentSavingsSegmentUsd).toBeCloseTo(
-        2258.75,
-        2,
-      );
+      expect(result.summary.investmentSavingsSegmentUsd).toBeCloseTo(2258.75, 2);
     });
 
     it("handles enterprise-scale data with many currencies", async () => {
@@ -366,18 +363,7 @@ describe("TreasuryService", () => {
       const reserves: any[] = [];
 
       // Simulate 50 currencies with dual segments
-      const currencies = [
-        "NGN",
-        "KES",
-        "ZAR",
-        "GHS",
-        "RWF",
-        "TZS",
-        "UGX",
-        "EGP",
-        "MAD",
-        "XOF",
-      ];
+      const currencies = ["NGN", "KES", "ZAR", "GHS", "RWF", "TZS", "UGX", "EGP", "MAD", "XOF"];
 
       for (let i = 0; i < 5; i++) {
         for (const currency of currencies) {
@@ -465,9 +451,7 @@ describe("TreasuryService", () => {
 
       expect(result.healthy).toBe(false);
       expect(result.totalBalanceUsd).toBe(0);
-      expect(result.warnings).toContain(
-        "Treasury health check failed - see server logs",
-      );
+      expect(result.warnings).toContain("Treasury health check failed - see server logs");
     });
   });
 

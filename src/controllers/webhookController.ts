@@ -18,6 +18,7 @@ import { config } from "../config/env";
 import { logger, logFinancialEvent } from "../config/logger";
 import { prisma } from "../config/database";
 import { AppError } from "../middleware/errorHandler";
+import { ErrorCodes } from "../types/errorCodes";
 import { reconcileBillsWebhook } from "../services/bills";
 import type { FinancialEventStatus } from "../types/logging";
 
@@ -64,21 +65,27 @@ export function verifyFlutterwaveSignature(
     throw new AppError(
       "Webhook verification unavailable: secret not configured",
       503,
-      "CONFIG_ERROR",
+      ErrorCodes.CONFIG_ERROR,
     );
 
   }
 
   const rawBody = (req as unknown as { rawBody?: Buffer }).rawBody;
   if (!rawBody || !Buffer.isBuffer(rawBody)) {
-    res.status(400).json({ error: "Raw body required for verification" });
-    return;
+    throw new AppError(
+      "Raw body required for verification",
+      400,
+      ErrorCodes.RAW_BODY_REQUIRED,
+    );
   }
 
   const received = req.headers["verif-hash"] as string | undefined;
   if (!received) {
-    res.status(401).json({ error: "Missing verif-hash header" });
-    return;
+    throw new AppError(
+      "Missing verif-hash header",
+      401,
+      ErrorCodes.MISSING_SIGNATURE,
+    );
   }
 
   const computed = crypto
@@ -105,7 +112,7 @@ export function verifyFlutterwaveSignature(
     return;
   }
   logger.warn("Flutterwave webhook signature mismatch");
-  res.status(401).json({ error: "Invalid signature" });
+  throw new AppError("Invalid signature", 401, ErrorCodes.INVALID_SIGNATURE);
 }
 
 // ── Paystack Webhook ────────────────────────────────────────────────────────
@@ -137,21 +144,27 @@ export function verifyPaystackSignature(
     throw new AppError(
       "Webhook verification unavailable: secret not configured",
       503,
-      "CONFIG_ERROR",
+      ErrorCodes.CONFIG_ERROR,
     );
 
   }
 
   const rawBody = (req as unknown as { rawBody?: Buffer }).rawBody;
   if (!rawBody || !Buffer.isBuffer(rawBody)) {
-    res.status(400).json({ error: "Raw body required for verification" });
-    return;
+    throw new AppError(
+      "Raw body required for verification",
+      400,
+      ErrorCodes.RAW_BODY_REQUIRED,
+    );
   }
 
   const received = req.headers["x-paystack-signature"] as string | undefined;
   if (!received) {
-    res.status(401).json({ error: "Missing x-paystack-signature header" });
-    return;
+    throw new AppError(
+      "Missing x-paystack-signature header",
+      401,
+      ErrorCodes.MISSING_SIGNATURE,
+    );
   }
 
   const computed = crypto
@@ -175,8 +188,7 @@ export function verifyPaystackSignature(
 
   if (!signatureValid) {
     logger.warn("Paystack webhook signature mismatch");
-    res.status(401).json({ error: "Invalid signature" });
-    return;
+    throw new AppError("Invalid signature", 401, ErrorCodes.INVALID_SIGNATURE);
   }
   next();
 }

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from "express";
 import { logger } from "../config/logger";
+import { ErrorCodes } from "../types/errorCodes";
 
 export class AppError extends Error {
   statusCode: number;
@@ -15,8 +16,17 @@ export class AppError extends Error {
   ) {
     super(message);
     this.statusCode = statusCode;
+    const fallbackCode =
+      statusCode === 429
+        ? ErrorCodes.RATE_LIMIT_EXCEEDED
+        : statusCode >= 500
+          ? ErrorCodes.INTERNAL_ERROR
+          : ErrorCodes.BAD_REQUEST;
+
     this.code =
-      typeof codeOrDetails === "string" ? codeOrDetails : "APP_ERROR";
+      typeof codeOrDetails === "string"
+        ? codeOrDetails
+        : fallbackCode;
     this.details =
       typeof codeOrDetails === "string" ? details : codeOrDetails;
     this.isOperational = true;
@@ -65,6 +75,7 @@ export const errorHandler = (
     res.status(400).json({
       error: {
         code: "INVALID_JSON",
+        error_code: "INVALID_JSON",
         message: "Invalid JSON payload",
         details: { message: err.message },
       },
@@ -85,6 +96,7 @@ export const errorHandler = (
     res.status(err.statusCode).json({
       error: {
         code: err.code,
+        error_code: err.code,
         message: err.message,
         statusCode: err.statusCode,
         ...(err.details ? { details: err.details } : {}),
@@ -99,6 +111,7 @@ export const errorHandler = (
   res.status(500).json({
     error: {
       code: "INTERNAL_ERROR",
+      error_code: "INTERNAL_ERROR",
       message: "Internal server error",
     },
   });

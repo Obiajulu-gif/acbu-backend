@@ -5,6 +5,7 @@
  */
 import type { ConsumeMessage } from "amqplib";
 import { connectRabbitMQ, QUEUES, assertQueueWithDLQ } from "../config/rabbitmq";
+import { getQueueMaxRetries } from "./queueConfig";
 import { logger, logFinancialEvent } from "../config/logger";
 import { prisma } from "../config/database";
 import { mintFromUsdcInternal } from "../controllers/mintController";
@@ -12,7 +13,7 @@ import { fetchXlmRateUsd } from "../services/oracle/cryptoClient";
 import { randomUUID } from "crypto";
 
 const QUEUE = QUEUES.XLM_TO_ACBU;
-const MAX_RETRIES = 5;
+const MAX_RETRIES = getQueueMaxRetries(QUEUE);
 
 export interface XlmToAcbuPayload {
   onRampSwapId: string;

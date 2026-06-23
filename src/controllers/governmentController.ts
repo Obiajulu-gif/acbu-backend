@@ -9,6 +9,7 @@ import { AuthRequest } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { basketService } from "../services/basket";
 import { ReserveTracker } from "../services/reserve/ReserveTracker";
+import { getMonthlyStatements } from "../services/reports/reportService";
 
 type DecimalLike = { toNumber: () => number } | null | undefined;
 type BasketEntry = { currency: string; weight: number };
@@ -45,10 +46,7 @@ type TreasuryResponse = {
   message: string;
 };
 
-const treasuryCache = new Map<
-  string,
-  { expiresAt: number; value: TreasuryResponse }
->();
+const treasuryCache = new Map<string, { expiresAt: number; value: TreasuryResponse }>();
 
 function decimalToNumber(value: DecimalLike): number {
   return value?.toNumber() ?? 0;
@@ -71,10 +69,7 @@ function getActorContext(req: AuthRequest): {
   const organizationId = req.apiKey?.organizationId ?? null;
 
   if (!userId && !organizationId) {
-    throw new AppError(
-      "Government treasury requires a user or organization context",
-      401,
-    );
+    throw new AppError("Government treasury requires a user or organization context", 401);
   }
 
   if (userId) {
@@ -99,10 +94,7 @@ function getActorContext(req: AuthRequest): {
   };
 }
 
-function getOrderedCurrencies(
-  preferredOrder: string[],
-  currencies: Iterable<string>,
-): string[] {
+function getOrderedCurrencies(preferredOrder: string[], currencies: Iterable<string>): string[] {
   const remaining = new Set(currencies);
   const ordered: string[] = [];
 
@@ -117,10 +109,7 @@ function getOrderedCurrencies(
 }
 
 function getReserveValue(
-  reserveByCurrencyAndSegment: Map<
-    string,
-    { reserveAmount: number; reserveValueUsd: number }
-  >,
+  reserveByCurrencyAndSegment: Map<string, { reserveAmount: number; reserveValueUsd: number }>,
   currency: string,
   segment: string,
 ): { reserveAmount: number; reserveValueUsd: number } {
@@ -164,10 +153,7 @@ export async function getGovernmentTreasury(
       prisma.reserve.findMany({
         where: {
           segment: {
-            in: [
-              ReserveTracker.SEGMENT_TRANSACTIONS,
-              ReserveTracker.SEGMENT_INVESTMENT_SAVINGS,
-            ],
+            in: [ReserveTracker.SEGMENT_TRANSACTIONS, ReserveTracker.SEGMENT_INVESTMENT_SAVINGS],
           },
         },
         orderBy: { timestamp: "desc" },
@@ -205,13 +191,10 @@ export async function getGovernmentTreasury(
       { reserveAmount: number; reserveValueUsd: number }
     >();
     for (const reserve of latestReserves) {
-      reserveByCurrencyAndSegment.set(
-        `${reserve.currency}:${reserve.segment}`,
-        {
-          reserveAmount: reserve.reserveAmount.toNumber(),
-          reserveValueUsd: reserve.reserveValueUsd.toNumber(),
-        },
-      );
+      reserveByCurrencyAndSegment.set(`${reserve.currency}:${reserve.segment}`, {
+        reserveAmount: reserve.reserveAmount.toNumber(),
+        reserveValueUsd: reserve.reserveValueUsd.toNumber(),
+      });
     }
 
     const txByCurrency = new Map<
@@ -226,14 +209,9 @@ export async function getGovernmentTreasury(
 
     let totalBalanceAcbu = 0;
     for (const transaction of transactions) {
-      const mintedAcbu =
-        transaction.type === "mint"
-          ? decimalToNumber(transaction.acbuAmount)
-          : 0;
+      const mintedAcbu = transaction.type === "mint" ? decimalToNumber(transaction.acbuAmount) : 0;
       const burnedAcbu =
-        transaction.type === "burn"
-          ? decimalToNumber(transaction.acbuAmountBurned)
-          : 0;
+        transaction.type === "burn" ? decimalToNumber(transaction.acbuAmountBurned) : 0;
       totalBalanceAcbu += mintedAcbu - burnedAcbu;
 
       if (!transaction.localCurrency) continue;
@@ -254,12 +232,9 @@ export async function getGovernmentTreasury(
       txByCurrency.set(transaction.localCurrency, current);
     }
 
-    const currencyUniverse = new Set<string>(
-      basket.map((entry: BasketEntry) => entry.currency),
-    );
+    const currencyUniverse = new Set<string>(basket.map((entry: BasketEntry) => entry.currency));
     for (const currency of txByCurrency.keys()) currencyUniverse.add(currency);
-    for (const reserve of latestReserves)
-      currencyUniverse.add(reserve.currency);
+    for (const reserve of latestReserves) currencyUniverse.add(reserve.currency);
 
     const byCurrency = getOrderedCurrencies(
       basket.map((entry: BasketEntry) => entry.currency),
@@ -306,15 +281,9 @@ export async function getGovernmentTreasury(
 
     const response: TreasuryResponse = {
       totalBalanceAcbu,
-      totalReserveExposureUsd: byCurrency.reduce(
-        (sum, row) => sum + row.reserveValueUsd.total,
-        0,
-      ),
+      totalReserveExposureUsd: byCurrency.reduce((sum, row) => sum + row.reserveValueUsd.total, 0),
       segments: {
-        transactionsUsd: byCurrency.reduce(
-          (sum, row) => sum + row.reserveValueUsd.transactions,
-          0,
-        ),
+        transactionsUsd: byCurrency.reduce((sum, row) => sum + row.reserveValueUsd.transactions, 0),
         investmentSavingsUsd: byCurrency.reduce(
           (sum, row) => sum + row.reserveValueUsd.investmentSavings,
           0,
@@ -352,26 +321,13 @@ export async function getGovernmentStatements(
       }
     }
 
-    const transactions = await prisma.transaction.findMany({
-      where: {
+    const transactions = await getMonthlyStatements(
+      {
         ...actor.transactionWhere,
         type: { in: ["mint", "burn", "transfer"] },
       },
-      orderBy: { createdAt: "desc" },
-      take: limit,
-      select: {
-        id: true,
-        type: true,
-        status: true,
-        acbuAmount: true,
-        acbuAmountBurned: true,
-        usdcAmount: true,
-        localCurrency: true,
-        localAmount: true,
-        fee: true,
-        createdAt: true,
-      },
-    });
+      limit,
+    );
 
     res.status(200).json({
       statements: transactions,

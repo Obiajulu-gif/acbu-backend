@@ -3,6 +3,7 @@
  */
 import type { ConsumeMessage } from "amqplib";
 import { connectRabbitMQ, QUEUES } from "../config/rabbitmq";
+import { getQueueMaxRetries } from "./queueConfig";
 import { logger } from "../config/logger";
 import { deliverWebhook } from "../services/webhook";
 
@@ -10,7 +11,7 @@ interface WebhookJobPayload {
   webhookId: string;
 }
 
-const MAX_RETRIES = 5;
+const MAX_RETRIES = getQueueMaxRetries(QUEUES.WEBHOOKS);
 
 export async function startWebhookConsumer(): Promise<void> {
   const ch = await connectRabbitMQ();

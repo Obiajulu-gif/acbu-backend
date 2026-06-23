@@ -1,8 +1,5 @@
 import { Router } from "express";
-import {
-  postUnlock,
-  postUnlockVerify,
-} from "../controllers/recoveryController";
+import { postUnlock, postUnlockVerify } from "../controllers/recoveryController";
 import { standardRateLimiter } from "../middleware/rateLimiter";
 
 const router: ReturnType<typeof Router> = Router();
@@ -35,6 +32,7 @@ router.use(standardRateLimiter);
  *             properties:
  *               identifier:
  *                 type: string
+ *                 example: "@alice"
  *               passcode:
  *                 type: string
  *               device_fingerprint:

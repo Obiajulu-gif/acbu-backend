@@ -35,6 +35,7 @@ describe("AuditConsumer", () => {
     consume: jest.fn(),
     ack: jest.fn(),
     nack: jest.fn(),
+    prefetch: jest.fn(),
   };
 
   const entry = {

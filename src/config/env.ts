@@ -9,6 +9,7 @@ const envSchema = z.object({
   PORT: z.coerce.number().default(5000),
   API_VERSION: z.string().default("v1"),
   DATABASE_URL: z.string().min(1),
+  DATABASE_URL_REPLICA: z.string().optional(),
   MONGODB_URI: z.string().min(1),
   RABBITMQ_URL: z.string().min(1),
   JWT_SECRET: z.string().min(1),
@@ -72,6 +73,7 @@ export const config = {
   port: env.PORT,
   apiVersion: env.API_VERSION,
   databaseUrl: env.DATABASE_URL,
+  databaseUrlReplica: env.DATABASE_URL_REPLICA,
   prismaAccelerateUrl: env.PRISMA_ACCELERATE_URL,
   mongodbUri: env.MONGODB_URI,
   rabbitmqUrl: env.RABBITMQ_URL,
@@ -136,10 +138,6 @@ export const config = {
     uploadUrlTtlSeconds: parseInt(process.env.S3_UPLOAD_URL_TTL_SECONDS || "900", 10),
     downloadUrlTtlSeconds: parseInt(process.env.S3_DOWNLOAD_URL_TTL_SECONDS || "300", 10),
     scanWebhookSecret: process.env.S3_SCAN_WEBHOOK_SECRET || "",
-  },
-  bulkTransfer: {
-    chunkSize: parseInt(process.env.BULK_TRANSFER_CHUNK_SIZE || "100", 10),
-    maxFileSizeBytes: parseInt(process.env.BULK_TRANSFER_MAX_FILE_SIZE_BYTES || "10485760", 10),
   },
   fintech: {
     currencyProviders: ((): Record<string, string> => {
@@ -300,12 +298,6 @@ export const config = {
   webhook: {
     url: process.env.WEBHOOK_URL || "",
     secret: process.env.WEBHOOK_SECRET || "",
-  },
-
-  // Enterprise / bulk transfer settings (stubbed for build)
-  bulkTransfer: {
-    chunkSize: parseInt(process.env.BULK_TRANSFER_CHUNK_SIZE || "1000", 10),
-    maxFileSizeBytes: parseInt(process.env.BULK_TRANSFER_MAX_FILE_SIZE_BYTES || "104857600", 10),
   },
 
   // Limits

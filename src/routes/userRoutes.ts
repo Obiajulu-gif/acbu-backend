@@ -62,8 +62,10 @@ router.use(apiKeyRateLimiter);
  *               email:
  *                 type: string
  *                 format: email
+ *                 example: "user@example.com"
  *               phone_e164:
  *                 type: string
+ *                 example: "+15551234567"
  *               privacy_hide_from_search:
  *                 type: boolean
  *               passcode:
@@ -303,8 +305,10 @@ router.delete("/me/contacts/:id", deleteContact);
  *               guardian_email:
  *                 type: string
  *                 format: email
+ *                 example: "guardian@example.com"
  *               guardian_phone:
  *                 type: string
+ *                 example: "+15551234567"
  *     responses:
  *       201:
  *         description: Guardian added successfully

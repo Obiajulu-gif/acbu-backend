@@ -3,6 +3,7 @@
  */
 import type { ConsumeMessage } from "amqplib";
 import { connectRabbitMQ, QUEUES, assertQueueWithDLQ } from "../config/rabbitmq";
+import { getQueueMaxRetries } from "./queueConfig";
 import { logger } from "../config/logger";
 import { prisma } from "../config/database";
 import {
@@ -114,7 +115,6 @@ async function processNotification(
   logger.debug("Notification type not handled", { type });
 }
 
-const MAX_RETRIES = 5;
 
 export async function startNotificationConsumer(): Promise<void> {
   const ch = await connectRabbitMQ();
@@ -133,7 +133,8 @@ export async function startNotificationConsumer(): Promise<void> {
         ch.ack(msg);
       } catch (e) {
         logger.error("OTP_SEND consumer error", { error: e });
-        if (retries >= MAX_RETRIES) {
+        const maxRetries = getQueueMaxRetries(QUEUES.OTP_SEND);
+        if (retries >= maxRetries) {
           logger.error("OTP_SEND failed permanently, sending to DLQ", { retries });
           ch.nack(msg, false, false);
           return;
@@ -163,7 +164,8 @@ export async function startNotificationConsumer(): Promise<void> {
         ch.ack(msg);
       } catch (e) {
         logger.error("NOTIFICATIONS consumer error", { error: e });
-        if (retries >= MAX_RETRIES) {
+        const maxRetries = getQueueMaxRetries(QUEUES.NOTIFICATIONS);
+        if (retries >= maxRetries) {
           logger.error("NOTIFICATIONS failed permanently, sending to DLQ", { retries });
           ch.nack(msg, false, false);
           return;

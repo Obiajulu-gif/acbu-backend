@@ -4,6 +4,7 @@
  */
 import type { ConsumeMessage } from "amqplib";
 import { connectRabbitMQ, QUEUES, assertQueueWithDLQ } from "../config/rabbitmq";
+import { getQueueMaxRetries } from "./queueConfig";
 import { logger } from "../config/logger";
 import { prisma } from "../config/database";
 import { basketService } from "../services/basket";
@@ -11,7 +12,7 @@ import { getFintechRouter } from "../services/fintech";
 import { Decimal } from "@prisma/client/runtime/library";
 
 const QUEUE = QUEUES.USDC_CONVERSION;
-const MAX_RETRIES = 5;
+const MAX_RETRIES = getQueueMaxRetries(QUEUE);
 
 export interface UsdcConversionPayload {
   usdcAmount: string;

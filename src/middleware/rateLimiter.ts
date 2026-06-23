@@ -10,6 +10,7 @@ import type {
 import { AuthRequest } from "./auth";
 import { cacheService, sanitizeKey } from "../utils/cache";
 import { logger } from "../config/logger";
+import { ErrorCodes } from "../types/errorCodes";
 import { circuitBreaker } from "../utils/circuitBreaker";
 
 type FallbackRateLimitEntry = {
@@ -90,7 +91,8 @@ const enforceFallbackLimit = (
     });
     res.status(429).json({
       error: {
-        code: "RATE_LIMIT_EXCEEDED",
+        code: ErrorCodes.RATE_LIMIT_EXCEEDED,
+        error_code: ErrorCodes.RATE_LIMIT_EXCEEDED,
         message: "Rate limit exceeded (degraded mode)",
       },
     });
@@ -241,7 +243,8 @@ export const createRateLimiter = (
     handler: (_req: Request, res: Response) => {
       res.status(429).json({
         error: {
-          code: "RATE_LIMIT_EXCEEDED",
+          code: ErrorCodes.RATE_LIMIT_EXCEEDED,
+          error_code: ErrorCodes.RATE_LIMIT_EXCEEDED,
           message,
           limitType: context,
         },
@@ -296,7 +299,8 @@ export const apiKeyRateLimiter = async (
       // null means cap was hit — return 429 directly
       res.status(429).json({
         error: {
-          code: "RATE_LIMIT_EXCEEDED",
+          code: ErrorCodes.RATE_LIMIT_EXCEEDED,
+          error_code: ErrorCodes.RATE_LIMIT_EXCEEDED,
           message: "API key rate limit exceeded, please try again later.",
           limitType: "api_key" as LimiterContext,
         },

@@ -37,9 +37,7 @@
     "/v1/reserves": {
       "get": {
         "summary": "Get current reserve status",
-        "tags": [
-          "Reserves"
-        ],
+        "tags": ["Reserves"],
         "security": [
           {
             "ApiKeyAuth": []
@@ -79,9 +77,7 @@
     "/v1/reserves/track": {
       "post": {
         "summary": "Manually trigger reserve tracking",
-        "tags": [
-          "Reserves"
-        ],
+        "tags": ["Reserves"],
         "security": [
           {
             "ApiKeyAuth": []

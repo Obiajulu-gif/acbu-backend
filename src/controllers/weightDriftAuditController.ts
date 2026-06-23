@@ -14,6 +14,8 @@
 import { Request, Response, NextFunction } from "express";
 import { weightDriftAuditService } from "../services/reserve/WeightDriftAuditService";
 import { logger } from "../config/logger";
+import { AppError } from "../middleware/errorHandler";
+import { ErrorCodes } from "../types/errorCodes";
 
 /**
  * @swagger
@@ -103,7 +105,7 @@ export const getWeightDriftAudit = async (
     res.json(audit);
   } catch (e) {
     if ((e as any).code === "P2025") {
-      res.status(404).json({ error: "Audit not found" });
+      throw new AppError("Audit not found", 404, ErrorCodes.NOT_FOUND);
     } else {
       logger.error("Failed to get weight drift audit", { error: e });
       next(e);
@@ -207,9 +209,9 @@ export const approveWeightDriftAudit = async (
   } catch (e) {
     const error = e as any;
     if (error.code === "P2025") {
-      res.status(404).json({ error: "Audit not found" });
+      throw new AppError("Audit not found", 404, ErrorCodes.NOT_FOUND);
     } else if (error.message?.includes("Cannot approve audit")) {
-      res.status(400).json({ error: error.message });
+      throw new AppError(error.message, 400, ErrorCodes.BAD_REQUEST);
     } else {
       logger.error("Failed to approve weight drift audit", { error: e });
       next(e);
@@ -259,8 +261,11 @@ export const rejectWeightDriftAudit = async (
     const { reason } = req.body;
 
     if (!reason) {
-      res.status(400).json({ error: "Rejection reason is required" });
-      return;
+      throw new AppError(
+        "Rejection reason is required",
+        400,
+        ErrorCodes.REJECTION_REASON_REQUIRED,
+      );
     }
 
     const adminId = (req as any).adminId || "system";
@@ -280,9 +285,9 @@ export const rejectWeightDriftAudit = async (
   } catch (e) {
     const error = e as any;
     if (error.code === "P2025") {
-      res.status(404).json({ error: "Audit not found" });
+      throw new AppError("Audit not found", 404, ErrorCodes.NOT_FOUND);
     } else if (error.message?.includes("Cannot reject audit")) {
-      res.status(400).json({ error: error.message });
+      throw new AppError(error.message, 400, ErrorCodes.BAD_REQUEST);
     } else {
       logger.error("Failed to reject weight drift audit", { error: e });
       next(e);
